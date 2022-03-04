@@ -233,8 +233,7 @@ async def fetch(ctx):
 
 
     global line
-    global WL_Status
-    global FM_Status
+
 
     Global_members = ctx.guild.members
     for member in Global_members:
@@ -242,6 +241,8 @@ async def fetch(ctx):
         global line
         line = {}
 
+        global WL_Status
+        global FM_Status
         WL_Status= False
         FM_Status= False
 
@@ -252,41 +253,45 @@ async def fetch(ctx):
                 if str(Role) == str(Member_Role.id):
 
                     line = {'Discord Username':[member],'Whitelist':['yes']}
+                    print('pass')
                     WL_Status = True
                     break
 
-
-
+            counter=0
+            print(WL_Status)
             for FRole in FmRoles:
 
+
                 if str(FRole) == str(Member_Role.id):
-                        if(WL_Status):
+                        if(WL_Status == True):
+
                             line = {'Discord Username':[member],'Whitelist':['yes'],'Free Mint':['yes']}
 
+                            dummy_df= pd.DataFrame(line)
+                            User_List = pd.concat([User_List,dummy_df],ignore_index = True)
 
 
-
-                            FM_Status=True
 
                             break
                         else:
 
 
                             line =  {'Discord Username': [member],'Whitelist': ['No'],'Free Mint':['yes']}
-                            FM_Status= True
+                            dummy_df= pd.DataFrame(line)
+                            User_List = pd.concat([User_List,dummy_df],ignore_index = True)
                             break
 
-
-
                 else:
+                    counter+=1
+
+
+                if( len(FmRoles) == counter):
                     if(WL_Status):
                         line = {'Discord Username': [member],'Whitelist': ['yes'],'Free Mint':['no']}
                         break
 
 
-            if(WL_Status or FM_Status):
-                dummy_df= pd.DataFrame(line)
-                User_List = pd.concat([User_List,dummy_df],ignore_index = True)
+          
 
 
 
@@ -294,6 +299,7 @@ async def fetch(ctx):
     User_List = User_List.drop_duplicates(subset=['Discord Username'],ignore_index = True)
 
 
+    print(User_List)
 
 
 
