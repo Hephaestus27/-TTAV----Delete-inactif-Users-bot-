@@ -7,6 +7,8 @@ import pandas as pd
 import numpy as np
 import pandas as pd
 import openpyxl
+import xlrd
+from pip._vendor import requests
 
 Intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="V!", description="This is a TTAV Cleanup bot",intents = Intents)
@@ -291,7 +293,7 @@ async def fetch(ctx):
                         break
 
 
-          
+
 
 
 
@@ -326,6 +328,8 @@ async def fetch(ctx):
     await ctx.channel.send(file=discord.File('TTAV_WL_FreeMint.xlsx'))
 
 
+global DATA_FROM_FETCHING
+DATA_FROM_FETCHING = []
 
 @bot.command(brief="You input the desired channel to send a msg to then the  list of users and it's send to the channel ", description="V!say #tag_channel")
 async def say(ctx, channel: discord.TextChannel):
@@ -371,6 +375,9 @@ async def say(ctx, channel: discord.TextChannel):
 
 
         final = str(all_users).split('\n')
+
+        global DATA_FROM_FETCHING
+        DATA_FROM_FETCHING = final
         user_dict={}
         for user in final:
             try:
@@ -469,9 +476,181 @@ async def say(ctx, channel: discord.TextChannel):
 
 
 
+@bot.command()
+@commands.has_permissions(kick_members=True)
+async def kickOnly(ctx, Role:discord.Role):
+
+    embed_confirmation = discord.Embed(title="Confirmation", description=" ", color=discord.Color.purple())
+    embed_confirmation.set_thumbnail(url="https://www.timevillains.xyz/assets/MAIN_VILLAIN_STROKE%201.732accfc.png")
+
+    embed_confirmation.add_field(name="ARE YOU SURE OF YOUR CHOICE?", value=f"Delete any users who only have the {Role} Role?")
+    embed_confirmation.add_field(name="To Confirm Type in :", value="yes", inline=True)
+
+    embed_confirmation.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
+
+
+    await ctx.send(embed=embed_confirmation)
+
+
+    def check(message: discord.Message):
+        return message.channel == ctx.channel and message.author != ctx.me
+
+    try:
+        msg = await bot.wait_for('message',check=check, timeout=20)
+
+        while(True):
+            if(str(msg.content).lower() == 'yes'):
+
+                await ctx.send("preparing annihalation.")
+                await asyncio.sleep(0.2)
+                await ctx.send("preparing annihalation..")
+                await asyncio.sleep(0.2)
+                await ctx.send("preparing annihalation...")
+
+                index = 0
+
+                for member in ctx.guild.members:
+                        if( len(member.roles) == 2 ):
+
+                            for user_role in member.roles:
+                                if (user_role is Role) :
+                                    await ctx.guild.kick(member, reason="banned by bot by the command : V!kickOnly")
+                                    index += 1
+
+                if(index > 0):
+                    await ctx.send(f"{index} aliens exterminated *MUAHAHAHAHAAAAA* ! ")
+                    index = 0
+                else:
+                    await ctx.send(f" No aliens exterminated with the following Role : {Role.name} :cry: ")
+
+
+                break
+
+            msg = await bot.wait_for('message',check=check, timeout=20)
+            
+    except TimeoutError:
+        await ctx.reply("you took too much time to reply, please re initiate the command: ``` V!kickOnly @ROLE] ```")
+
+
+
+
+
+
+@bot.command()
+async def substractedData(ctx):
+
+    def emb(nm, val):
+
+        embed_general = discord.Embed(title="Confirmation", description=" ", color=discord.Color.purple())
+        embed_general.set_thumbnail(url="https://www.timevillains.xyz/assets/MAIN_VILLAIN_STROKE%201.732accfc.png")
+
+        embed_general.add_field(name=nm, value=val)
+
+        embed_general.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
+
+        return embed_general
+
+
+    def check(message: discord.Message):
+        return message.channel == ctx.channel and message.author != ctx.me
+
+    await ctx.send('Please send me the excel file containing the data you want to substract from')
+
+    try:
+        msg = await bot.wait_for('message',check=check, timeout=60)
+        while(True):
+            print(str(msg.attachments))
+            if not str( msg.attachments): # Checks if there is an attachment on the message
+                return
+            else: # If there is it gets the filename from message.attachments
+                split_v1 = str(msg.attachments).split("filename='")[1]
+                filename = str(split_v1).split("' ")[0]
+                if filename.endswith(".xlsx") or filename.endswith(".xls") : # Checks if it is a .xlsx file
+                    url = str(msg.attachments).split("url='")[1]
+                    print(url)
+                    myfile = requests.get(url)
+                    print(myfile.content)
+                    open("dummy.xlsx", 'w').write(myfile.content)
+                    DATA = pd.read_excel('dummy.xlsx')  #LOCAL FILE
+                    subs_data = pd.read_excel('TTAV_WL_FreeMint.xlsx')
+
+                    DATAIndx = DATA.index
+                    Indx = subs_data.index
+
+                    number_of_rows = len(Indx)
+                    DATAIndx = len(DATAIndx)
+
+                    value=0
+                    All_users =[]
+                    WLUsers = []
+                    while(True):
+                        print(value)
+                        try:
+                            if(value != number_of_rows):
+                                    WLUsers.append(subs_data.iloc[value]['Discord Username'])
+                        except IndexError:
+                            None
+                        try:
+
+                            if(value != DATAIndx):
+                                All_users.append(DATA.iloc[value]['Discord Username'])
+                        except IndexError:
+                            None
+                        value +=1
+
+                        if(value == DATAIndx):
+                            break
+
+                    global DATA_FROM_FETCHING
+                    DATA_FROM_FETCHING= WLUsers
+                    final_list_of_users=[]
+                    if DATA_FROM_FETCHING: #not empty
+
+                        final_list_of_users =[x for x in All_users if x not in WLUsers]
+
+
+
+                    else:
+                        await ctx.send(' please use ```V!fetch``` first before using this command ')
+
+                    print(final_list_of_users)
+
+
+                    with open('Unregistred_users.txt', 'w') as f:
+                        text=""
+                        for user in final_list_of_users:
+                            text = text + user +'\n'
+
+                        if(text): #if not empty
+                            f.write(text)
+
+
+                    await ctx.reply('List if unverified users:')
+                    await ctx.send(file=discord.File('Unregistred_users.txt'))
+
+                    break
+
+    except TimeoutError:
+        await ctx.reply('you took too much time, please restart the command')
 
 @kick.error
 async def kick_error(ctx: commands.Context, error: commands.CommandError):
+
+    if isinstance(error, commands.RoleNotFound):
+        message = f"This role isnt found , please tag the correct Role"
+    elif isinstance(error, commands.MissingPermissions):
+        message = "You need to be an administrator to use such commands"
+    elif isinstance(error, commands.MissingRequiredArgument):
+        message = f"Missing a required argument: Role"
+    elif isinstance(error, commands.ConversionError):
+        message = str(error)
+    else:
+        message = "Oh no! Something went wrong while running the command!"
+
+
+
+@kickOnly.error
+async def kickOnly_error(ctx: commands.Context, error: commands.CommandError):
 
     if isinstance(error, commands.RoleNotFound):
         message = f"This role isnt found , please tag the correct Role"
